@@ -5,12 +5,10 @@ const port = 8080;
 const admin = require("firebase-admin");
 const serviceAccount = require("./ServiceAccountKey.json");
 
-const bodyParser = require('body-parser');
-const { firestore } = require("firebase-admin");
-
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
+
 const db = admin.firestore();
 
 app.listen(port, () => {
@@ -38,41 +36,12 @@ app.put("/colour", (req, res) => {
     });
 });
 
+app.get("/nearby", (req, res) => {
+  const {userLocation, locationThreshold} = req.body;
 
-/* this is the stuff that works
-app.get("/new_quote", (req, res) => {
+    res.json({
+      locations: [
 
-  const getQuote = async () => {
-    return {
-      quote: "Hello world!",
-      author: "every single programmer ever"
-    }
-  }
-
-  getQuote().then(result => {
-    return db.collection('quotes').doc('test').set(result)
-  }).catch(error => console.error(error))
-
-  res.send("Sure")
+      ]
+    })
 })
-
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
-
-app.get("/new_quote", (req, res) => {
-
-  const getQuote = async () => {
-    return {
-      quote: "Hello world!",
-      author: "every single programmer ever"
-    }
-  }
-
-  getQuote().then(result => {
-    return db.collection('quotes').doc('test').set(result)
-  }).catch(error => console.error(error))
-
-  res.send("Sure")
-})
-*/
