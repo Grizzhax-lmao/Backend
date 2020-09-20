@@ -4,11 +4,13 @@ const app = express();
 const port = 8080;
 
 const admin = require("firebase-admin");
-const serviceAccount = require("./key.json");
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+  credential: admin.credential.applicationDefault()
+  // credential: admin.credential.cert(key)
 });
+
+const db = admin.firestore();
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
@@ -18,7 +20,7 @@ app.use(express.json())
 
 app.post("/createUser", (req, res) => {
   // the authentication stuff:
-  const uid = "somuuid";
+  const {uid} = req.body;
 
   const additionalClaims = {
     premiumAccount: true
