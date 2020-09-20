@@ -26,25 +26,33 @@ app.put("/colour", (req, res) => {
 
   userCooldown.get().then((docSnapshot) => {
     if (!docSnapshot.exists) {
-      const data = {
-        lastPainted: admin.firestore.Firestore.FieldValue.serverTimestamp(),
-      };
-      const res = userRef.doc(req.body.user).set(data);
+      const res = userRef.doc(req.body.user);
     }
 
     userCooldown.onSnapshot((doc) => {
+      
       let timeDifference = Math.abs(
         doc.get("lastPainted") -
-          admin.firestore.Firestore.FieldValue.serverTimestamp()
+          Date.now()
       );
+        // console.log("test" + doc.get("lastPainted"));
+        // console.log("test2" + (typeof admin.firestore.Firestore.FieldValue.serverTimestamp()));
+        // console.log("the time dif is " + timeDifference);
 
-      res.write("the time dif is " + timeDifference);
-      res.end();
-
-      if (timeDifference >= cooldownTime) {
-        const timeLeft = new Date(timeDifference).toISOString().substr(11, 8);
-        res.write(timeLeft + "left before you can paint again!");
-        return;
+      if (timeDifference <= cooldownTime) {
+        const timeLeft = new Date(cooldownTime-timeDifference).toISOString().substr(11, 8);
+        res.write("You just painted a tile! Wait another " + timeLeft+ " minutes!");
+      } else {
+        getTile()
+      .then((result) => {
+        return db.collection("tiles").add(result);
+      })
+      .catch((error) => console.error(error))
+      .then(() => {
+        const update = userRef.doc(req.body.user).update({lastPainted: admin.firestore.Firestore.FieldValue.serverTimestamp()});
+        res.write("New tile added!");
+        
+      });
       }
     });
 
@@ -59,16 +67,7 @@ app.put("/colour", (req, res) => {
       };
     };
 
-    getTile()
-      .then((result) => {
-        return db.collection("tiles").add(result);
-      })
-      .catch((error) => console.error(error))
-      .then(() => {
-        const update = userRef.doc(req.body.user).update({lastPainted: admin.firestore.Firestore.FieldValue.serverTimestamp()});
-        res.write("New tile added!");
-        
-      });
+    
 
   });
 });
