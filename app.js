@@ -10,13 +10,29 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
-const db = admin.firestore();
-
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
 });
 
 app.use(express.json())
+
+app.post("/createUser", (req, res) => {
+  // the authentication stuff:
+  const uid = "somuuid";
+
+  const additionalClaims = {
+    premiumAccount: true
+  }
+
+  admin.auth().createCustomToken(uid, additionalClaims)
+    .then((customToken) => {
+      res.json({jwt: customToken})
+    })
+    .catch((error) => {
+      console.log("error creating token:", error)
+    })
+
+})
 
 app.put("/colour", (req, res) => {
   const getTile = async () => {
