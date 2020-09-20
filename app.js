@@ -20,25 +20,57 @@ app.use(express.json());
 app.put("/colour", (req, res) => {
   // console.log(JSON.stringify(req.body));
 
-  const getTile = async () => {
-    return {
-      hex: req.body.hex,
-      location: new admin.firestore.Firestore.GeoPoint(
-        req.body.location.latitude,
-        req.body.location.longitude
-      ),
-      uid: req.body.user,
-    };
-  };
+  const userRef = db.collection("users");
+  const userCooldown = userRef.doc(req.body.user);
+  const cooldownTime = 5 * 60 * 1000;
 
-  getTile()
-    .then((result) => {
-      return db.collection("tiles").add(result);
-    })
-    .catch((error) => console.error(error))
-    .then(() => {
-      res.send("new tile added!");
+  userCooldown.get().then((docSnapshot) => {
+    if (!docSnapshot.exists) {
+      const data = {
+        lastPainted: admin.firestore.Firestore.FieldValue.serverTimestamp(),
+      };
+      const res = userRef.doc(req.body.user).set(data);
+    }
+
+    userCooldown.onSnapshot((doc) => {
+      let timeDifference = Math.abs(
+        doc.get("lastPainted") -
+          admin.firestore.Firestore.FieldValue.serverTimestamp()
+      );
+
+      res.write("the time dif is " + timeDifference);
+      res.end();
+
+      if (timeDifference >= cooldownTime) {
+        const timeLeft = new Date(timeDifference).toISOString().substr(11, 8);
+        res.write(timeLeft + "left before you can paint again!");
+        return;
+      }
     });
+
+    const getTile = async () => {
+      return {
+        hex: req.body.hex,
+        location: new admin.firestore.Firestore.GeoPoint(
+          req.body.location.latitude,
+          req.body.location.longitude
+        ),
+        uid: req.body.user,
+      };
+    };
+
+    getTile()
+      .then((result) => {
+        return db.collection("tiles").add(result);
+      })
+      .catch((error) => console.error(error))
+      .then(() => {
+        const update = userRef.doc(req.body.user).update({lastPainted: admin.firestore.Firestore.FieldValue.serverTimestamp()});
+        res.write("New tile added!");
+        
+      });
+
+  });
 });
 
 /* not sure if this works
@@ -67,7 +99,8 @@ app.get("/nearby", (req, res) => {
   );
 
   // construct the Firestore query
-  let query = db.collection("tiles")
+  let query = db
+    .collection("tiles")
     .where("location", ">=", northwest)
     .where("location", "<=", southeast);
 
