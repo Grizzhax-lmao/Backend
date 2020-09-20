@@ -1,9 +1,10 @@
 const express = require("express");
+const { firestore } = require("firebase-admin");
 const app = express();
 const port = 8080;
 
 const admin = require("firebase-admin");
-const serviceAccount = require("./ServiceAccountKey.json");
+const serviceAccount = require("./key.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -18,7 +19,6 @@ app.listen(port, () => {
 app.use(express.json())
 
 app.put("/colour", (req, res) => {
-  console.log(JSON.stringify(req.body))
   const getTile = async () => {
     return {
       hex: req.body.hex,
@@ -28,20 +28,50 @@ app.put("/colour", (req, res) => {
   };
 
   getTile().then((result) => {
-      return db.collection("tiles").add(result);
-    })
+    return db.collection("tiles").add(result);
+  })
     .catch((error) => console.error(error))
     .then(() => {
       res.send("new tile added!");
     });
 });
 
-app.get("/nearby", (req, res) => {
-  const {userLocation, locationThreshold} = req.body;
+app.post("/colour", (req, res) => {
 
-    res.json({
-      locations: [
+  const getTile = async () => {
+    return {
+      hex: req.body.hex,
+      location: new admin.firestore.Firestore.GeoPoint(req.body.location.latitude, req.body.location.longitude),
+      uid: req.body.user
+    };
+  };
 
-      ]
+  getTile().then((result) => {
+    return db.collection("tiles").add(result);
+  })
+    .catch((error) => console.error(error))
+    .then(() => {
+      res.send("new tile added!");
+    });
+})
+
+app.get("/tiles", async (req, res) => {
+  const { userLocation, locationThreshold } = req.body;
+
+  const tiles = [];
+
+  const snapshot = await db.collection('tiles').get();
+
+  snapshot.forEach((doc) => {
+    tiles.push({
+      id: doc.id,
+      ...doc.data()
     })
+  });
+
+  // Keren will filter the tiles based on _latitude and _longitude
+
+  res.json({
+    tiles
+  })
 })
